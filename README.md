@@ -32,8 +32,10 @@ See `services/src/main/resources/quartz.properties`.
 - Agronomy model: R. Halvorsen (rhalvorsen@)
 
 
+# Team Members
 Syed Raamis
-Unsur Mir 
+Unsur Mir
+Liene Zubans
 
 ---
 *Last updated 2015-11-04.*
