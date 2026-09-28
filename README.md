@@ -33,9 +33,10 @@ See `services/src/main/resources/quartz.properties`.
 
 
 # Team Members
-Syed Raamis
-Unsur Mir
-Liene Zubans
+- Syed Raamis
+- Unsur Mir
+- Liene Zubans
+- Sheldon Dias
 
 ---
 *Last updated 2015-11-04.*
