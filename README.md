@@ -31,7 +31,8 @@ See `services/src/main/resources/quartz.properties`.
 - Application: A. Okonkwo (aokonkwo@)
 - Agronomy model: R. Halvorsen (rhalvorsen@)
 
-- Syed Raamis
+
+Syed Raamis
 
 ---
 *Last updated 2015-11-04.*
