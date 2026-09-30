@@ -160,14 +160,14 @@ The visual sequence diagram is provided below and committed to the repository as
 
 ## 5. Architectural Realities vs. Stale Documentation in the `README.md`
 
-A crucial finding from code archaeology is that `README.md` (last updated 2015) contains major discrepancies regarding how data flows through the system:
+Something we found from the code archaeology is that the `README.md` was last updated in 2015, meaning it contains major discrepancies regarding how data flows through the system. For example:
 
 1. **Database Layer (PostgreSQL vs. SQLite)**:
-   - *README Claim*: "The reading store is a PostgreSQL instance on `db01.meridian.internal`."
-   - *Code Reality*: The entire system operates against a single SQLite database (`meridian.db`). Ingest writes to it via `popen("sqlite3 ...", "w")` in C, while Python uses `sqlite3`, and Java invokes `sqlite3 -json` via `ProcessBuilder`.
+   - README Claim: The reading store is a PostgreSQL instance on `db01.meridian.internal`.
+   - Code Reality: The system operates against an SQLite database (`meridian.db`). Ingest writes to it via `popen("sqlite3 ...", "w")` in C, while Python uses `sqlite3`, and Java invokes `sqlite3 -json` via `ProcessBuilder`.
 2. **Application Server & Database Access (Spring Boot + JDBC vs. Bare JDK + Shell Subprocess)**:
-   - *README Claim*: "Application server (`services/`) is a Spring Boot application... Requires JDK 8 and PostgreSQL 9.4 client libraries."
-   - *Code Reality*: The service layer is a bare JDK `com.sun.net.httpserver.HttpServer` with zero Spring dependencies. Furthermore, because the collector host never had the SQLite JDBC driver installed (MRD-77), `Db.java` executes `sqlite3` CLI processes directly rather than using JDBC.
+   - README Claim: Application server (`services/`) is a Spring Boot application and requires JDK 8 and PostgreSQL 9.4 client libraries.
+   - Code Reality: The service layer is a bare JDK `com.sun.net.httpserver.HttpServer` with zero Spring dependencies. The collector host never had the SQLite JDBC driver installed, so `Db.java` executes `sqlite3` CLI processes directly rather than using JDBC.
 3. **Batch Scheduling (Quartz vs. Python Orchestration)**:
-   - *README Claim*: "The batch is scheduled by the application server's Quartz configuration. See `services/src/main/resources/quartz.properties`."
-   - *Code Reality*: Quartz and `quartz.properties` do not exist. Nightly batch modeling is coordinated entirely in Python by `analytics/run_forecast.py` and `analytics/meridian/orchestrator.py`.
+   - README Claim: The batch is scheduled by the application server's Quartz configuration. See `services/src/main/resources/quartz.properties`.
+   - Code Reality: Quartz and `quartz.properties` do not exist. Nightly batch modeling is coordinated in Python by `analytics/run_forecast.py` and `analytics/meridian/orchestrator.py`.
