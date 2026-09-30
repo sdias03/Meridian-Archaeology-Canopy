@@ -16,55 +16,6 @@ The visual sequence diagram is provided below and committed to the repository as
 
 ![End-to-End Reading Trace Diagram](part2_reading_trace.png)
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant Station as Field Station
-    participant Ingest as Telemetry Ingest<br/>(mrd_ingest / C)
-    participant Store as SQLite DB<br/>(meridian.db)
-    participant Orch as Orchestrator<br/>(orchestrator.py / Python)
-    participant Model as Crop Model<br/>(cropmod / FORTRAN)
-    participant Output as Scratch Disk<br/>(MERIDIAN.OUT)
-    participant Parser as Output Parser<br/>(parse.py / Python)
-    participant API as Services API<br/>(ApiServer / Java)
-    participant Console as Operator Console<br/>(dashboard / JS)
-
-    %% 1. Telemetry creation and Ingest
-    Station->>Ingest: Transmit telemetry reading<br/>[Format: 44-byte binary frame (big-endian)]
-    Note over Ingest: Validates CRC-16 checksum<br/>Decodes fixed-point ints (x100) to floats<br/>Applies QC range checks
-
-    %% 2. Raw storage
-    Ingest->>Store: Pipe SQL command via popen("sqlite3")<br/>[Format: SQL text INSERT OR REPLACE INTO reading]
-
-    %% 3. Orchestration query
-    Orch->>Store: SELECT reading WHERE stnid=? AND year=?<br/>[Format: SQL query -> SQLite rows / Reading DTOs]
-    Store-->>Orch: Return seasonal reading series
-
-    %% 4. Deck generation & Fortran run
-    Note over Orch: Writes MERIDIAN.DAT in locked scratch dir (MRD-201)<br/>Combines 4 weather channels with hardcoded soil (MRD-91)
-    Orch->>Model: Execute cropmod binary in scratch dir<br/>[Format: Fixed-width ASCII deck (FORMAT 900/901/902)]
-
-    %% 5. Fortran computation & output file
-    Note over Model: Computes water balance & crop growth<br/>(waterbal.f & growth.f90)
-    Model->>Output: Write daily simulation results<br/>[Format: Column-exact ASCII (FORMAT 910-913)]
-
-    %% 6. Parse and store forecast (Nightshift -> Archive Seam)
-    Output-->>Parser: Read MERIDIAN.OUT from scratch dir<br/>[Format: Column-exact ASCII file]
-    Note over Parser: Slices character spans COLS (MRD-143)<br/>Constructs typed ForecastResult DTO
-    Parser->>Store: Atomic commit to forecast & forecast_daily<br/>[Format: Parameterized SQL INSERT transaction]
-
-    %% 7. Console requests forecast series
-    Console->>API: HTTP GET /api/series?station=GUELPH&year=2025<br/>[Format: HTTP GET Request]
-    Note over API: No JDBC driver installed on host (MRD-77)<br/>Shells out via ProcessBuilder("sqlite3", "-json", ...)
-    API->>Store: Execute sqlite3 -json CLI query<br/>[Format: CLI process invocation]
-    Store-->>API: Stream JSON stdout<br/>[Format: JSON text stream array]
-    API-->>Console: HTTP 200 JSON payload<br/>[Format: application/json]
-
-    %% 8. Presentation
-    Note over Console: Appends formatted rows to #series tbody<br/>Renders proportional div.bar heights in #chart (MRD-181)
-```
-
----
 
 ## 3. Detailed Step-by-Step Hand-Offs & Data Formats
 
