@@ -1,7 +1,5 @@
 # Part 2: End-to-End Trace (Whole System)
 
-## 1. Overview and Objectives
-
 This document traces the complete lifecycle of a single weather reading in the Meridian platform—from its generation at a remote field station to its ultimate rendering as an agronomic indicator on the operator console:
 
 $$\text{frame} \longrightarrow \text{ingest} \longrightarrow \text{store} \longrightarrow \text{orchestrator} \longrightarrow \text{model} \longrightarrow \text{output} \longrightarrow \text{parser} \longrightarrow \text{store} \longrightarrow \text{API} \longrightarrow \text{console}$$
@@ -160,7 +158,7 @@ The visual sequence diagram is provided below and committed to the repository as
 
 ---
 
-## 5. Architectural Realities vs. Stale Documentation (`README.md`)
+## 5. Architectural Realities vs. Stale Documentation in the `README.md`
 
 A crucial finding from code archaeology is that `README.md` (last updated 2015) contains major discrepancies regarding how data flows through the system:
 
