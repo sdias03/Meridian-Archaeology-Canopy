@@ -1,101 +1,56 @@
 flowchart TB
-    %% ========================================================
-    %% MERIDIAN ARCHAEOLOGY - A2 SYSTEM MAP COMPONENT DIAGRAM
-    %% Team Canopy: Whole-System Architecture
-    %% ========================================================
-
-    subgraph EXTERNAL["External Field Network"]
-        FS["Field Stations (Automated Agri-Sensors)<br><i>Channels: TMAX, TMIN, RAIN, SRAD, RH, WIND</i>"]
+    subgraph External
+        FS[Field Stations]
     end
 
-    subgraph SUBSYSTEM_INGEST["Subsystem 2: Telemetry Ingest (ingest/)"]
-        direction TB
-        ING_COMP["&laquo;component&raquo;<br><b>mrd_ingest / tsstore</b><br>Language: C (C99)<br>CRC16 Validation &amp; Spooling"]
-        ING_IF["&laquo;interface&raquo;<br>Binary Frame Stream (:stdin / file spool)<br>44-byte Big-Endian (packet.h)"]
-        ING_IF --> ING_COMP
+    subgraph "Subsystem 2: Telemetry Ingest (ingest/)"
+        ING[mrd_ingest<br/>Language: C]
     end
 
-    subgraph STORAGE["Shared Data Store (data/meridian.db)"]
-        direction TB
-        DB_READING[("reading Table<br><i>stnid, year, doy, tmax, tmin, rain, srad, rh, wind, flags</i>")]
-        DB_FORECAST[("forecast Table<br><i>stnid, year, run_at, yield_t, ndays, model</i>")]
-        DB_DAILY[("forecast_daily Table<br><i>stnid, year, doy, sw, et, drain, biom, lai</i>")]
+    subgraph "Shared Storage (meridian.db)"
+        DB_READ[reading table]
+        DB_FC[forecast & forecast_daily tables]
     end
 
-    subgraph SUBSYSTEM_ANALYTICS["Subsystem 3: Analytics &amp; Orchestration (analytics/)"]
-        direction TB
-        ORCH_COMP["&laquo;component&raquo;<br><b>Orchestrator &amp; DeckBuilder</b><br>Language: Python 3<br>Nightly Batch Driver"]
-        PARSE_COMP["&laquo;component&raquo;<br><b>Output Parser &amp; Results DTO</b><br>Language: Python 3<br>Column-slice reader (MRD-143)"]
-        ORCH_CLI["&laquo;interface&raquo;<br>CLI Entry Point: run_forecast.py"]
-        ORCH_CLI --> ORCH_COMP
+    subgraph "Subsystem 3: Analytics (analytics/)"
+        ORCH[orchestrator.py<br/>Language: Python]
+        PARSER[parse.py<br/>Language: Python]
     end
 
-    subgraph SUBSYSTEM_MODEL["Subsystem 1: Numerical Model (model/) &mdash; Canopy Focus"]
-        direction TB
-        MODEL_DRIVER["&laquo;component&raquo;<br><b>CROPMOD Driver (cropmod.f)</b><br>Language: FORTRAN 77<br>Fixed I/O &amp; Ascending DOY assumption"]
-        MODEL_GROWTH["&laquo;component&raquo;<br><b>GROWTH Model (growth.f90)</b><br>Modules: phenology, canopy, partition<br>Language: Fortran 90"]
-        MODEL_WATBAL["&laquo;component&raquo;<br><b>WATBAL Engine (waterbal.f)</b><br>Multi-layer soil water &amp; runoff<br>Language: Fortran 77"]
-        
-        MODEL_DRIVER --> MODEL_GROWTH
-        MODEL_DRIVER --> MODEL_WATBAL
-        
-        IN_DECK["&laquo;interface / file&raquo;<br>MERIDIAN.DAT<br>80-column fixed-width input deck"]
-        OUT_FILE["&laquo;interface / file&raquo;<br>MERIDIAN.OUT<br>Fixed-width tabular simulation output"]
-        
-        IN_DECK --> MODEL_DRIVER
-        MODEL_DRIVER --> OUT_FILE
+    subgraph "Subsystem 1: Numerical Model (model/)"
+        MODEL[cropmod / growth<br/>Language: FORTRAN 77 / F90]
+        IN_FILE[(MERIDIAN.DAT)]
+        OUT_FILE[(MERIDIAN.OUT)]
     end
 
-    subgraph SUBSYSTEM_SERVICES["Subsystem 4: Services / API (services/)"]
-        direction TB
-        API_COMP["&laquo;component&raquo;<br><b>ApiServer (Bare JDK HttpServer)</b><br>Language: Java<br>QueryBuilder via sqlite3 CLI popen"]
-        API_IF["&laquo;interface&raquo;<br>REST HTTP API (:8081)<br>JSON / CORS enabled"]
-        API_COMP --> API_IF
+    subgraph "Subsystem 4: Services API (services/)"
+        API[ApiServer<br/>Language: Java]
     end
 
-    subgraph CLIENTS["Presentation Layer (Dual Consoles)"]
-        subgraph SUBSYSTEM_DASHBOARD["Subsystem 5: Operator Console (dashboard/)"]
-            DASH_COMP["&laquo;component&raquo;<br><b>Operator Console</b><br>Language: JS (jQuery 1.11)<br>Static HTML5/DOM bar chart (no build)"]
-        end
-
-        subgraph SUBSYSTEM_UINEXT["Subsystem 6: Modern UI (ui-next/)"]
-            UINEXT_COMP["&laquo;component&raquo;<br><b>ui-next SPA (Stalled Rewrite)</b><br>Language: TypeScript / React 18 (Vite)<br>3 of 11 screens active, 8 stubs"]
-        end
+    subgraph "Frontend Layer"
+        DASH[dashboard/ - Operator Console<br/>Language: JavaScript / jQuery]
+        UINEXT[ui-next/ - React UI<br/>Language: TypeScript / React]
     end
 
-    subgraph SUBSYSTEM_REPORTING["Subsystem 7: Reporting &amp; Export (reporting/)"]
-        direction TB
-        REP_COMP["&laquo;component&raquo;<br><b>Report Writer</b><br>Language: Python 3<br>Replaces legacy COBOL RPTGEN"]
-        REP_OUT["&laquo;interface / artifact&raquo;<br>132-Column Fixed-Format Text<br>Season summaries &amp; station bulletins"]
-        REP_COMP --> REP_OUT
+    subgraph "Subsystem 7: Reporting (reporting/)"
+        REP[reporting/<br/>Language: Python]
     end
 
-    %% Data and Control Flow Interconnections
-    FS -->|"Raw Telemetry Packets (RS-485 / Radio)"| ING_IF
-    ING_COMP -->|"SQL INSERT statements via popen('sqlite3 ...')"| DB_READING
+    %% Data and control connections
+    FS -->|44-byte binary packet| ING
+    ING -->|SQL text via popen sqlite3| DB_READ
 
-    ORCH_COMP -->|"SQL SELECT readings (SQLite library)"| DB_READING
-    ORCH_COMP -->|"Writes CWD fixed file (docs/DECKFMT.txt)"| IN_DECK
-    OUT_FILE -->|"Reads column-by-column (docs/OUTFMT.txt)"| PARSE_COMP
-    PARSE_COMP -->|"SQL INSERT / UPDATE forecasts"| DB_FORECAST
-    PARSE_COMP -->|"SQL INSERT daily time series"| DB_DAILY
+    ORCH -->|Query weather readings| DB_READ
+    ORCH -->|Write input deck| IN_FILE
+    IN_FILE -->|Read fixed columns| MODEL
+    MODEL -->|Write simulation results| OUT_FILE
+    OUT_FILE -->|Parse fixed columns| PARSER
+    PARSER -->|Insert forecast records| DB_FC
 
-    API_COMP -->|"Spawns ProcessBuilder('sqlite3', '-json', ...)"| DB_READING
-    API_COMP -->|"Queries station &amp; forecast state"| DB_FORECAST
-    API_COMP -->|"Queries daily series"| DB_DAILY
+    API -->|Query data via ProcessBuilder sqlite3| DB_READ
+    API -->|Query forecast data| DB_FC
 
-    DASH_COMP -->|"HTTP GET /api/stations, /api/forecast (:8081)"| API_IF
-    UINEXT_COMP -->|"HTTP GET /api/series, /api/health (:8081)"| API_IF
+    DASH -->|HTTP GET /api/stations, /api/forecast :8081| API
+    UINEXT -->|HTTP GET /api/series, /api/health :8081| API
 
-    REP_COMP -->|"Reads forecast &amp; reading tables directly"| STORAGE
-
-    %% Styling
-    classDef comp fill:#f0f4f8,stroke:#334e68,stroke-width:2px,color:#102a43;
-    classDef iface fill:#e0f2fe,stroke:#0284c7,stroke-width:1.5px,stroke-dasharray: 4 2,color:#0369a1;
-    classDef store fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#78350f;
-    classDef ext fill:#fee2e2,stroke:#dc2626,stroke-width:1.5px,color:#7f1d1d;
-
-    class ING_COMP,ORCH_COMP,PARSE_COMP,MODEL_DRIVER,MODEL_GROWTH,MODEL_WATBAL,API_COMP,DASH_COMP,UINEXT_COMP,REP_COMP comp;
-    class ING_IF,IN_DECK,OUT_FILE,API_IF,REP_OUT,ORCH_CLI iface;
-    class DB_READING,DB_FORECAST,DB_DAILY store;
-    class FS ext;
+    REP -->|Read forecast data| DB_FC
