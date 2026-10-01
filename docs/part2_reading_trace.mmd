@@ -1,0 +1,38 @@
+sequenceDiagram
+    autonumber
+
+    participant S as Station
+    participant I as Ingest
+    participant D as DB
+    participant O as Orchestrator
+    participant M as Model
+    participant F as Output
+    participant P as Parser
+    participant A as API
+    participant C as Console
+
+    S->>I: Telemetry<br/>44-byte BE frame
+    Note over I: CRC-16<br/>Decode x100<br/>QC checks
+
+    I->>D: INSERT reading
+    Note over I,D: sqlite3 via popen()
+
+    O->>D: SELECT readings
+    D-->>O: Seasonal series
+
+    Note over O: Build MERIDIAN.DAT<br/>MRD-201<br/>Weather + soil inputs
+    O->>M: Run cropmod<br/>ASCII deck
+
+    Note over M: Water balance<br/>Crop growth
+    M->>F: Daily results<br/>ASCII
+
+    F-->>P: MERIDIAN.OUT
+    Note over P: COLS parsing<br/>ForecastResult DTO
+    P->>D: Commit forecast
+
+    C->>A: GET /api/series
+    A->>D: sqlite3 -json
+    D-->>A: JSON
+    A-->>C: HTTP 200
+
+    Note over C: Update #series<br/>Render #chart
