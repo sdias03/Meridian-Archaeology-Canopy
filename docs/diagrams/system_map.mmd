@@ -1,0 +1,56 @@
+flowchart TB
+    subgraph External
+        FS[Field Stations]
+    end
+
+    subgraph "Subsystem 2: Telemetry Ingest (ingest/)"
+        ING[mrd_ingest<br/>Language: C]
+    end
+
+    subgraph "Shared Storage (meridian.db)"
+        DB_READ[reading table]
+        DB_FC[forecast & forecast_daily tables]
+    end
+
+    subgraph "Subsystem 3: Analytics (analytics/)"
+        ORCH[orchestrator.py<br/>Language: Python]
+        PARSER[parse.py<br/>Language: Python]
+    end
+
+    subgraph "Subsystem 1: Numerical Model (model/)"
+        MODEL[cropmod / growth<br/>Language: FORTRAN 77 / F90]
+        IN_FILE[(MERIDIAN.DAT)]
+        OUT_FILE[(MERIDIAN.OUT)]
+    end
+
+    subgraph "Subsystem 4: Services API (services/)"
+        API[ApiServer<br/>Language: Java]
+    end
+
+    subgraph "Frontend Layer"
+        DASH[dashboard/ - Operator Console<br/>Language: JavaScript / jQuery]
+        UINEXT[ui-next/ - React UI<br/>Language: TypeScript / React]
+    end
+
+    subgraph "Subsystem 7: Reporting (reporting/)"
+        REP[reporting/<br/>Language: Python]
+    end
+
+    %% Data and control connections
+    FS -->|44-byte binary packet| ING
+    ING -->|SQL text via popen sqlite3| DB_READ
+
+    ORCH -->|Query weather readings| DB_READ
+    ORCH -->|Write input deck| IN_FILE
+    IN_FILE -->|Read fixed columns| MODEL
+    MODEL -->|Write simulation results| OUT_FILE
+    OUT_FILE -->|Parse fixed columns| PARSER
+    PARSER -->|Insert forecast records| DB_FC
+
+    API -->|Query data via ProcessBuilder sqlite3| DB_READ
+    API -->|Query forecast data| DB_FC
+
+    DASH -->|HTTP GET /api/stations, /api/forecast :8081| API
+    UINEXT -->|HTTP GET /api/series, /api/health :8081| API
+
+    REP -->|Read forecast data| DB_FC
