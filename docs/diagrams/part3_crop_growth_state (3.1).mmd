@@ -1,0 +1,35 @@
+stateDiagram-v2
+    [*] --> STAGE_PRESOW: Run initialization\npheno_reset(), canopy_reset(), pools_reset()
+
+    STAGE_PRESOW: Stage 0 — Pre-Emergence
+    STAGE_PRESOW: LAI = 0
+    STAGE_PRESOW: Biomass pools = 0
+    STAGE_PRESOW: Accumulate photoperiod-adjusted thermal time
+
+    STAGE_PRESOW --> STAGE_VEG: tt_cum >= TT_EMERG (120 °C·d)\nemerged = true\ntt_since_emg = tt_cum - TT_EMERG
+
+    STAGE_VEG: Stage 2 — Vegetative
+    STAGE_VEG: Accumulate thermal time from emergence
+    STAGE_VEG: LAI expands toward LAIMAX (5.2)
+    STAGE_VEG: Expansion is reduced by water stress
+    STAGE_VEG: Assimilate partitions 55% leaf / 45% stem
+
+    STAGE_VEG --> STAGE_GRAINFIL: tt_since_emg >= TT_ANTH (900 °C·d)\nanthesis = true
+
+    STAGE_GRAINFIL: Stage 4 — Grain Filling
+    STAGE_GRAINFIL: gf_frac progresses from 0 to 1
+    STAGE_GRAINFIL: LAI senesces toward 10% of peak
+    STAGE_GRAINFIL: Water stress accelerates senescence
+    STAGE_GRAINFIL: Assimilate begins partitioning to grain
+    STAGE_GRAINFIL: Stem reserves may remobilise to grain
+
+    STAGE_GRAINFIL --> STAGE_MATURE: tt_since_emg >= TT_MAT (1450 °C·d)\nmature = true\ngf_frac = 1.0
+
+    STAGE_MATURE: Stage 5 — Physiological Maturity
+    STAGE_MATURE: LAI held at 10% of peak
+    STAGE_MATURE: No further dry-matter partitioning
+    STAGE_MATURE: Grain pool determines final yield
+
+    STAGE_MATURE --> [*]: Simulation complete
+
+    # Short paragraph
