@@ -14,3 +14,7 @@ data/*.bin
 data/*.txt
 ui-next/node_modules/
 ui-next/dist/
+part3_*raw.*
+git-history.txt
+hist-*.txt
+.DS_Store

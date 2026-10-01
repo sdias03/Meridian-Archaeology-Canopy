@@ -1,0 +1,29 @@
+flowchart TD
+    Start([GROWTH called]) --> Init[Initialize model state<br/>pheno_reset<br/>canopy_reset<br/>pools_reset]
+
+    Init --> DayLoop[Begin daily simulation<br/>i = 1 to N]
+
+    DayLoop --> Thermal[Calculate effective thermal time<br/>raw_tt = gdd_day TMAX, TMIN<br/>ppf = photoperiod_factor XLAT, IDOY<br/>tt_eff = raw_tt × ppf]
+
+    Thermal --> Pheno[Advance phenology<br/>pheno_advance<br/>Update thermal clocks, stage and gf_frac]
+
+    Pheno --> Stress[Calculate water-stress factor<br/>from SW and AWC<br/>Clamp/scale result to 0..1]
+
+    Stress --> Canopy[Update canopy<br/>canopy_update<br/>Expand or senesce LAI based on<br/>phenology and water stress]
+
+    Canopy --> Light[Calculate light interception<br/>fint = 1 - exp -KEXT × LAI]
+
+    Light --> Assim[Calculate daily assimilate<br/>RUE = RUE0 × stress<br/>db = RUE × SRAD × fint]
+
+    Assim --> Partition[Partition dry matter<br/>partition_day<br/>Update leaf, stem and grain pools<br/>and stem remobilisation]
+
+    Partition --> Record[Record daily outputs<br/>BIOM = leaf + stem + grain<br/>XLAI = current LAI]
+
+    Record --> MoreDays{More daily records?}
+
+    MoreDays -- Yes --> DayLoop
+    MoreDays -- No --> Yield[Calculate final grain yield<br/>grain_yield = grain × 0.01 t/ha]
+
+    Yield --> Return[Return BIOM array,<br/>XLAI array and YIELD]
+
+    Return --> End([GROWTH complete])
